@@ -1,4 +1,4 @@
-TARGET=test
+TARGET=snek
 .PHONE: all clean
 
 all: $(TARGET).prg
