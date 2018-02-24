@@ -3,6 +3,8 @@
 
   jmp main
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 setup:
   jsr $e544 ; clear screen
   lda #11 ; border color
@@ -10,6 +12,8 @@ setup:
   lda #2 ; bg color
   sta $d021
   rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 draw_play_field_border:
   ; draw play field border
@@ -74,10 +78,13 @@ draw_sides_out:
 
   rts
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 main:
   jsr setup
   jsr draw_play_field_border
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 endloop:
   jmp endloop
