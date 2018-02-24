@@ -2,8 +2,9 @@
   org $1000
 
 loop:
-  ldy #$03
-  sty $d020
-  iny
-  sty $d021
+  lda #$08
+  sta $d020
+  sec
+  sbc #$08
+  sta $d021
   jmp loop
