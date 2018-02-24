@@ -11,13 +11,27 @@
   ; screen clear loop.
   ; screen is from $0400 to $07ff
   ; loops backwards from 255 to 0, then breaks
-loop:
+clear_loop:
   sta $0400,x
   sta $0500,x
   sta $0600,x
   sta $0700,x
   dex
-  bne loop
+  bne clear_loop
 
-wait:
-  jmp wait
+  ; rasterlines
+loop:
+  lda $d012 ; raster line low byte
+  sec
+  sbc #$10
+  bpl upper
+
+  ; lower
+  lda #$04
+  sta $d021
+  jmp loop
+
+upper:
+  lda #$05
+  sta $d021
+  jmp loop
