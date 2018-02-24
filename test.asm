@@ -2,7 +2,8 @@
   org $1000
 
 loop:
+  ldx #$20
   lda #$03
-  sta $d021
-  sta $d020
+  sta $d000,X
+  sta $d001,X
   jmp loop
