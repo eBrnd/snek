@@ -80,8 +80,32 @@ draw_sides_out:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+busy_loop SUBROUTINE busy_loop:
+  ; wait for a while TODO do this with a timer/counter
+  ; for now, use (90,91) as 16 bit counter and just busy-loop
+  lda #$ff
+  sta $90
+  sta $91
+.wait_loop:
+  sec
+  lda $90
+  sbc #1
+  sta $90
+  lda $91
+  sbc #0
+  sta $91
+  cmp #$fa
+  beq .wait_out
+  jmp .wait_loop
+.wait_out:
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 game_setup SUBROUTINE game_setup:
   jsr draw_border
+
+  ; TODO clean inside of play area - and set a nice color for the snake
 
   ; position of head: (82,83) (both as ptr to screen memory)
   ; position of tail: (84,85)
@@ -102,16 +126,63 @@ game_setup SUBROUTINE game_setup:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+read_input SUBROUTINE read_input:
+  ; reads the joystick and adjusts the snek direction (addr $86) accordingly
+  ; TODO probably do this more than once per game loop - e.g. during each raster interrupt
+  lda $dc01 ; joystick port 1
+  tax
+
+  and #$1
+  cmp #$1
+  bne .up
+
+  txa
+  and #$2
+  cmp #$2
+  bne .down
+
+  txa
+  and #$4
+  cmp #$4
+  bne .left
+
+  txa
+  and #$8
+  cmp #$8
+  bne .right
+
+  rts ; fall through means no direction pressed, so no change in direction
+
+.up:
+  lda #0
+  sta $86
+  rts
+.down:
+  lda #2
+  sta $86
+  rts
+.left:
+  lda #3
+  sta $86
+  rts
+.right:
+  lda #1
+  sta $86
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 game_loop SUBROUTINE game_loop:
   ; Idea here: this provides all the game play, and loops until game over. then the main routine
   ; takes care of displaying game over screen / welcome screen and re-starting if the player chooses
   ; to.
 
-  ; TODO fill color ram with snake color - before drawing border
-  ;      when drawing goodies, they should be a different color - maybe it makes sense to have a
+  ; TODO when drawing goodies, they should be a different color - maybe it makes sense to have a
   ;      subroutine for drawing them. when eating them, the color ram has to be reset to snek color.
 
   ; TODO draw segment according to direction where head was in last round
+
+  jsr read_input
 
   ; move head
   lda $86
@@ -181,6 +252,8 @@ game_loop SUBROUTINE game_loop:
 
   ; TODO check segment where tail is, delete it and advance tail
 
+  jsr busy_loop
+
   jmp game_loop
 
   rts
@@ -189,8 +262,11 @@ game_loop SUBROUTINE game_loop:
 
 main SUBROUTINE main:
   jsr setup
+
+.loop_forever:
   jsr game_setup
   jsr game_loop
+  jmp .loop_forever
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
