@@ -7,7 +7,13 @@
 ; our program
   org $1000
 
-  jmp main
+main SUBROUTINE
+  jsr setup
+
+.loop_forever:
+  jsr game_setup
+  jsr game_loop
+  jmp .loop_forever
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -128,13 +134,50 @@ game_setup SUBROUTINE game_setup:
   lda #$0 ; 0 - north; 1 - east; 2 - south; 3 - west
   sta $86
 
+  ; setup interrupt handler
+  sei ; disable interrupt
+
+  lda #$7f ; disable cia I, II, and VIC interrupts
+  sta $dc0d
+  sta $dd0d
+
+  lda #$01 ; enable raster interrupt
+  sta $d01a
+
+  lda #$1b ; single color text mode
+  ldx #$08
+  ldy #$14
+  sta $d011
+  stx $d016
+  sty $d018
+
+  lda #<irq ; install our interrupt handler
+  ldx #>irq
+  sta $0314
+  stx $0315
+
+  ldy #$42 ; raster interrupt at some line
+  sty $d012
+
+  lda $dc02 ; clear pending interrupts
+  lda $dd0d
+  asl $d019
+
+  cli ; enable interrupt
+
   rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+irq: ; inerrupt handler
+  jsr read_input
+  asl $d019 ; ack interrupt
+  jmp $ea81 ; restore stack
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 read_input SUBROUTINE read_input:
   ; reads the joystick and adjusts the snek direction (addr $86) accordingly
-  ; TODO probably do this more than once per game loop - e.g. during each raster interrupt
   lda $dc01 ; joystick port 1
   tax
 
@@ -187,8 +230,6 @@ game_loop SUBROUTINE game_loop:
   ;      subroutine for drawing them. when eating them, the color ram has to be reset to snek color.
 
   ; TODO draw segment according to direction where head was in last round
-
-  jsr read_input
 
   ; move head
   lda $86
@@ -265,16 +306,3 @@ game_loop SUBROUTINE game_loop:
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-main SUBROUTINE main:
-  jsr setup
-
-.loop_forever:
-  jsr game_setup
-  jsr game_loop
-  jmp .loop_forever
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-end_loop:
-  jmp end_loop
