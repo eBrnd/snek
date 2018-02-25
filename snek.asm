@@ -2,7 +2,7 @@
 
   ; constants
 border_color set 11 ; screen border
-bg_color set 5 ; background
+bg_color set 13 ; background
 barrier_color set 0 ; game board border
 barrier_char_code set 35 ; char code for the border 35 = #
 snek_head set 81 ; char code for the snake head 81 = dot in the middle
@@ -10,6 +10,10 @@ snek_head set 81 ; char code for the snake head 81 = dot in the middle
 ; autostart
   org $0801
   .byte $0c,$08,$0a,$00,$9e,$20,$34,$30,$39,$36,$00,$00,$00
+
+; variables
+  org $0900
+frame_ctr: .byte $00
 
 ; our program
   org $1000
@@ -99,28 +103,6 @@ draw_sides_out:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-busy_loop SUBROUTINE busy_loop:
-  ; wait for a while TODO do this with a timer/counter
-  ; for now, use (90,91) as 16 bit counter and just busy-loop
-  lda #$ff
-  sta $90
-  sta $91
-.wait_loop:
-  sec
-  lda $90
-  sbc #1
-  sta $90
-  lda $91
-  sbc #0
-  sta $91
-  cmp #$fa
-  beq .wait_out
-  jmp .wait_loop
-.wait_out:
-  rts
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 game_setup SUBROUTINE game_setup:
   jsr draw_border
 
@@ -177,6 +159,7 @@ game_setup SUBROUTINE game_setup:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 irq: ; inerrupt handler
+  inc frame_ctr
   jsr read_input
   asl $d019 ; ack interrupt
   jmp $ea81 ; restore stack
@@ -306,7 +289,12 @@ game_loop SUBROUTINE game_loop:
 
   ; TODO check segment where tail is, delete it and advance tail
 
-  jsr busy_loop
+.timer_loop
+  lda frame_ctr
+  cmp #30
+  bne .timer_loop
+  lda #0
+  sta frame_ctr
 
   jmp game_loop
 
