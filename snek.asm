@@ -11,11 +11,18 @@ snek_head set 81 ; char code for the snake head 81 = dot in the middle
   org $0801
   .byte $0c,$08,$0a,$00,$9e,$20,$34,$30,$39,$36,$00,$00,$00
 
+; pointers (stuff I want in zero page)
+head_h equ $fe
+head_l equ $fd
+tail_h equ $fc
+tail_l equ $fb
+
 ; variables
   org $0900
 frame_ctr: .byte $00
+direction: .byte $00
 
-; our program
+; program
   org $1000
 
 main SUBROUTINE
@@ -40,7 +47,7 @@ setup SUBROUTINE setup:
 
 draw_border SUBROUTINE draw_border:
   ; draw play field border
-  ; uses $80 and $81 for pointers
+  ; uses $fb and $fc for pointer
   ldx #0 ; index
 .first_and_last_line_loop:
   lda #barrier_char_code ; char code for the border
@@ -56,46 +63,46 @@ draw_border SUBROUTINE draw_border:
 
   ; draw sides
   lda #$04
-  sta $81 ; address
+  sta $fc ; address
   lda #40
-  sta $80
+  sta $fb
 .sides_loop:
   lda #35 ; character code for the border
   ldy #$0
-  sta ($80),y
+  sta ($fb),y
   ldy #39
-  sta ($80),y
+  sta ($fb),y
 
   ; now, add d4 to the high byte to get to the color ram
   clc
   lda #$d4
-  adc $81
-  sta $81
+  adc $fc
+  sta $fc
 
   lda #0 ; color code
-  sta ($80),y ; assumes y to still be 39
+  sta ($fb),y ; assumes y to still be 39
   ldy #$0
-  sta ($80),y
+  sta ($fb),y
 
   sec ; subtract d4 again to get back into screen ram
-  lda $81
+  lda $fc
   sbc #$d4
-  sta $81
+  sta $fc
 
-  lda #40 ; add 40 to the value in (81,80)
+  lda #40 ; add 40 to the value in (fc,fb)
   clc
-  adc $80
-  sta $80
+  adc $fb
+  sta $fb
   lda #0
-  adc $81
-  sta $81
+  adc $fc
+  sta $fc
 
-  lda $81
+  lda $fc
   cmp #$07
   beq draw_sides_out ; just do the last few lines
   jmp .sides_loop
 draw_sides_out:
-  lda $80
+  lda $fb
   cmp #$c0
   bne .sides_loop
 
@@ -108,20 +115,18 @@ game_setup SUBROUTINE game_setup:
 
   ; TODO clean inside of play area - and set a nice color for the snake
 
-  ; position of head: (82,83) (both as ptr to screen memory)
-  ; position of tail: (84,85)
-  lda #$5
-  sta $83
+  lda #$5 ; initialize head and tail
+  sta head_h
   lda #$f4
-  sta $82
+  sta head_l
   lda #$6
-  sta $84
+  sta tail_l
   lda #$58
-  sta $85
+  sta tail_h
 
-  ; snek direction 86
+  ; snek direction
   lda #$0 ; 0 - north; 1 - east; 2 - south; 3 - west
-  sta $86
+  sta direction
 
   ; setup interrupt handler
   sei ; disable interrupt
@@ -167,7 +172,7 @@ irq: ; inerrupt handler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 read_input SUBROUTINE read_input:
-  ; reads the joystick and adjusts the snek direction (addr $86) accordingly
+  ; reads the joystick and adjusts the snek direction accordingly
   lda $dc01 ; joystick port 1
   tax
 
@@ -194,19 +199,19 @@ read_input SUBROUTINE read_input:
 
 .up:
   lda #0
-  sta $86
+  sta direction
   rts
 .down:
   lda #2
-  sta $86
+  sta direction
   rts
 .left:
   lda #3
-  sta $86
+  sta direction
   rts
 .right:
   lda #1
-  sta $86
+  sta direction
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -222,7 +227,7 @@ game_loop SUBROUTINE game_loop:
   ; TODO draw segment according to direction where head was in last round
 
   ; move head
-  lda $86
+  lda direction
   cmp #0
   beq .move_north
   cmp #1
@@ -232,49 +237,49 @@ game_loop SUBROUTINE game_loop:
 
   ; move west -- TODO lots of duplicate code -- make macro
   sec
-  lda $82
+  lda head_l
   sbc #1
-  sta $82
-  lda $83
+  sta head_l
+  lda head_h
   sbc #0
-  sta $83
+  sta head_h
   jmp .move_out
 
 .move_north:
   sec
-  lda $82
+  lda head_l
   sbc #40
-  sta $82
-  lda $83
+  sta head_l
+  lda head_h
   sbc #0
-  sta $83
+  sta head_h
   jmp .move_out
 
 .move_east:
   clc
-  lda $82
+  lda head_l
   adc #1
-  sta $82
-  lda $83
+  sta head_l
+  lda head_h
   adc #0
-  sta $83
+  sta head_h
   jmp .move_out
 
 .move_south:
   clc
-  lda $82
+  lda head_l
   adc #40
-  sta $82
-  lda $83
+  sta head_l
+  lda head_h
   adc #0
-  sta $83
+  sta head_h
   jmp .move_out
 
 .move_out:
 
   ; check collision
   ldy #0
-  lda ($82),y
+  lda (head_l),y
   cmp #32 ; space
   beq .continue
   rts ; game over. -- TODO once we have a "life counter", subtract a life and restart
@@ -284,7 +289,7 @@ game_loop SUBROUTINE game_loop:
   ; draw new segment where head is
   lda #snek_head
   ldy #0
-  sta ($82),y
+  sta (head_l),y
 
 
   ; TODO check segment where tail is, delete it and advance tail
