@@ -1,5 +1,12 @@
   processor 6502
 
+  ; constants
+border_color set 11 ; screen border
+bg_color set 5 ; background
+barrier_color set 0 ; game board border
+barrier_char_code set 35 ; char code for the border 35 = #
+snek_head set 81 ; char code for the snake head 81 = dot in the middle
+
 ; autostart
   org $0801
   .byte $0c,$08,$0a,$00,$9e,$20,$34,$30,$39,$36,$00,$00,$00
@@ -19,9 +26,9 @@ main SUBROUTINE
 
 setup SUBROUTINE setup:
   jsr $e544 ; clear screen
-  lda #11 ; border color
+  lda #border_color
   sta $d020
-  lda #2 ; bg color
+  lda #bg_color
   sta $d021
   rts
 
@@ -32,10 +39,10 @@ draw_border SUBROUTINE draw_border:
   ; uses $80 and $81 for pointers
   ldx #0 ; index
 .first_and_last_line_loop:
-  lda #35 ; char code for the border
+  lda #barrier_char_code ; char code for the border
   sta $400,x ; poke to screen memory
   sta $7c0,x ; poke to screen memory
-  lda #00 ; color for the char
+  lda #barrier_color ; color for the char
   sta $d800,x ; poke to color ram
   sta $dbc0,x ; poke to color ram
   inx
@@ -292,7 +299,7 @@ game_loop SUBROUTINE game_loop:
 .continue:
 
   ; draw new segment where head is
-  lda #81
+  lda #snek_head
   ldy #0
   sta ($82),y
 
