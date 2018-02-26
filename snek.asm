@@ -6,6 +6,12 @@ bg_color set 13 ; background
 barrier_color set 0 ; game board border
 barrier_char_code set 35 ; char code for the border 35 = #
 snek_head set 81 ; char code for the snake head 81 = dot in the middle
+snek_horz set 67 ; line drawing chars for snek body
+snek_vert set 66
+snek_dl set 73
+snek_ul set 75
+snek_dr set 85
+snek_ur set 74
 
 ; autostart
   org $0801
@@ -21,6 +27,7 @@ tail_l equ $fb
   org $0900
 frame_ctr: .byte $00
 direction: .byte $00
+prev_dir: .byte $00
 
 ; program
   org $1000
@@ -127,6 +134,7 @@ game_setup SUBROUTINE game_setup:
   ; snek direction
   lda #$0 ; 0 - north; 1 - east; 2 - south; 3 - west
   sta direction
+  sta prev_dir
 
   ; setup interrupt handler
   sei ; disable interrupt
@@ -176,6 +184,7 @@ read_input SUBROUTINE read_input:
   lda $dc01 ; joystick port 1
   tax
 
+  ; TODO ignore "backwards"
   and #$1
   cmp #$1
   bne .up
@@ -224,10 +233,79 @@ game_loop SUBROUTINE game_loop:
   ; TODO when drawing goodies, they should be a different color - maybe it makes sense to have a
   ;      subroutine for drawing them. when eating them, the color ram has to be reset to snek color.
 
-  ; TODO draw segment according to direction where head was in last round
-
-  ; move head
+  ; replace head by line segment =======
+  ; (this could be moved into the "move head" blocks probably, and save some branches, but this is
+  ; an optimization that would make the code harder to read, so we don't do it until we run into
+  ; problems)
+  ; (we assume direction does not change while this routine is running, i.e. that is completes
+  ; fast enough before the next raster interrupt fires)
   lda direction
+  cmp #0
+  beq .moving_north
+  cmp #1
+  beq .moving_east
+  cmp #2
+  beq .moving_south
+
+  ; moving west
+  lda prev_dir
+  cmp #0
+  beq .downleft ; #1: don't care (would be reversing directions)
+  cmp #2
+  beq .upleft
+  jmp .horz ; fallthrough #3
+
+.moving_north:
+  lda prev_dir
+  cmp #0
+  beq .vert
+  cmp #1
+  beq .upleft ; #2 don't care
+  jmp .upright ; fallthrough #3
+
+.moving_east:
+  lda prev_dir
+  cmp #0
+  beq .downright
+  cmp #1
+  beq .horz ; fallthrough #2
+  jmp .upright ; #3 don't care
+
+.moving_south:
+  lda prev_dir ; #0 don't care
+  cmp #1
+  beq .downleft
+  cmp #2
+  beq .vert
+  jmp .downright ; fallthrough #3
+
+  ; replace head character by appropriate body character
+.horz:
+  lda #snek_horz
+  jmp .replacehead
+.vert:
+  lda #snek_vert
+  jmp .replacehead
+.downleft:
+  lda #snek_dl
+  jmp .replacehead
+.upleft:
+  lda #snek_ul
+  jmp .replacehead
+.downright:
+  lda #snek_dr
+  jmp .replacehead
+.upright:
+  lda #snek_ur
+
+.replacehead:
+  ldy #0
+  sta (head_l),y
+
+
+  ; move head =========================
+  lda direction
+  sta prev_dir ; store previous direction for next round
   cmp #0
   beq .move_north
   cmp #1
