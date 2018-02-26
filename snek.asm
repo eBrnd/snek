@@ -12,6 +12,7 @@ snek_dl set 73
 snek_ul set 75
 snek_dr set 85
 snek_ur set 74
+space_char set 32 ; free space on game board (= space character)
 
 ; autostart
   org $0801
@@ -28,6 +29,7 @@ tail_l equ $fb
 frame_ctr: .byte $00
 direction: .byte $00
 prev_dir: .byte $00
+tail_dir: .byte $00
 
 ; program
   org $1000
@@ -127,14 +129,15 @@ game_setup SUBROUTINE game_setup:
   lda #$f4
   sta head_l
   lda #$6
-  sta tail_l
-  lda #$58
   sta tail_h
+  lda #$1c
+  sta tail_l
 
   ; snek direction
   lda #$0 ; 0 - north; 1 - east; 2 - south; 3 - west
   sta direction
   sta prev_dir
+  sta tail_dir
 
   ; setup interrupt handler
   sei ; disable interrupt
@@ -351,14 +354,13 @@ game_loop SUBROUTINE game_loop:
   lda head_h
   adc #0
   sta head_h
-  jmp .move_out
 
 .move_out:
 
   ; check collision
   ldy #0
   lda (head_l),y
-  cmp #32 ; space
+  cmp #space_char
   beq .continue
   rts ; game over. -- TODO once we have a "life counter", subtract a life and restart
 
@@ -369,10 +371,110 @@ game_loop SUBROUTINE game_loop:
   ldy #0
   sta (head_l),y
 
+  ; draw tail
+  lda #space_char
+  ldy #0
+  sta (tail_l),y
 
-  ; TODO check segment where tail is, delete it and advance tail
+  ; advance tail
+  lda tail_dir
+  cmp #0
+  beq .tail_north
+  cmp #1
+  beq .tail_east
+  cmp #2
+  beq .tail_south
 
-.timer_loop
+  ; TODO this is really copy pasta. go and finally make a macro
+  ; tail west
+  sec
+  lda tail_l
+  sbc #1
+  sta tail_l
+  lda tail_h
+  sbc #0
+  sta tail_h
+  jmp .tailmove_out
+
+.tail_north:
+  sec
+  lda tail_l
+  sbc #40
+  sta tail_l
+  lda tail_h
+  sbc #0
+  sta tail_h
+  jmp .tailmove_out
+
+.tail_east:
+  clc
+  lda tail_l
+  adc #1
+  sta tail_l
+  lda tail_h
+  adc #0
+  sta tail_h
+  jmp .tailmove_out
+
+.tail_south:
+  clc
+  lda tail_l
+  adc #40
+  sta tail_l
+  lda tail_h
+  adc #0
+  sta tail_h
+
+.tailmove_out:
+  ; set new tail direction according to the segment which is now under the tail
+  ldy #0
+  lda (tail_l),y
+
+  cmp #snek_horz
+  beq .tail_nochange
+  cmp #snek_vert
+  beq .tail_nochange ; tail is straight - no change in direction
+
+  lda tail_dir
+  cmp #0
+  beq .tail_vert
+  cmp #2
+  beq .tail_vert
+
+  ; tail must be going left or right - just check if it curves up or down
+  lda (tail_l),y ; assumes y to still be 0
+  cmp #snek_dl
+  beq .newtail_south
+  cmp #snek_dr
+  beq .newtail_south
+  jmp .newtail_north ; fallthrough snek_ul and snek_ur
+
+.tail_vert: ; tail is going up or down - we just have to check if it curves left or right
+  lda (tail_l),y ; assumes y to still be 0
+  cmp #snek_dl
+  beq .newtail_west
+  cmp #snek_ul
+  beq .newtail_west
+  jmp .newtail_east ; fallthrough snek_ur and snek_dr
+
+.newtail_north:
+  lda #0
+  jmp .newtail_out
+.newtail_east:
+  lda #1
+  jmp .newtail_out
+.newtail_south:
+  lda #2
+  jmp .newtail_out
+.newtail_west:
+  lda #3
+
+.newtail_out:
+  sta tail_dir
+
+.tail_nochange:
+
+.timer_loop:
   lda frame_ctr
   cmp #30
   bne .timer_loop
