@@ -1,6 +1,7 @@
   processor 6502
 
-  ; constants
+; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 border_color set 11 ; screen border
 bg_color set 13 ; background
 barrier_color set 0 ; game board border
@@ -13,25 +14,33 @@ snek_ul set 75
 snek_dr set 85
 snek_ur set 74
 space_char set 32 ; free space on game board (= space character)
+goodie_char set 83 ; char for the goodies (= heart)
 
-; autostart
+; autostart ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   org $0801
   .byte $0c,$08,$0a,$00,$9e,$20,$34,$30,$39,$36,$00,$00,$00
 
-; pointers (stuff I want in zero page)
+; pointers (stuff I want in zero page) ;
+
 head_h equ $fe
 head_l equ $fd
 tail_h equ $fc
 tail_l equ $fb
 
-; variables
+; variables ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   org $0900
 frame_ctr: .byte $00
 direction: .byte $00
 prev_dir: .byte $00
 tail_dir: .byte $00
 
-; program
+; for goodie placer
+rnd_row: .byte $00
+rnd_col: .byte $00
+
+; program ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   org $1000
 
 main SUBROUTINE
@@ -169,6 +178,13 @@ game_setup SUBROUTINE game_setup:
   asl $d019
 
   cli ; enable interrupt
+
+  ; set SID to noise, for randome number generator
+  lda #$ff
+  sta $d40e
+  sta $d40f
+  lda #$80
+  sta $d412
 
   rts
 
@@ -473,6 +489,7 @@ game_loop SUBROUTINE game_loop:
   sta tail_dir
 
 .tail_nochange:
+  jsr place_goodie
 
 .timer_loop:
   lda frame_ctr
@@ -482,6 +499,55 @@ game_loop SUBROUTINE game_loop:
   sta frame_ctr
 
   jmp game_loop
+
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+place_goodie SUBROUTINE place_goodie:
+  ; load random numbers from SID
+  lda $d41b
+  and #$0f ; 0..15
+  clc
+  adc #6 ; 6..21
+  sta rnd_row
+  lda $d41b
+  and #$1f ; 0..31
+  clc
+  adc #4 ; 4..35
+  sta rnd_col
+
+  ; calculate goodie offset in screen
+  ldx #$04 ; x as high byte
+  ldy #$00 ; y as low byte
+
+.row_loop:
+  dec rnd_row ; it's never 0, so it's okay here to start with a dec
+  beq .row_out
+  tya
+  clc
+  adc #40
+  tay
+  txa
+  adc #0
+  tax
+  jmp .row_loop
+.row_out:
+  tya
+  clc
+  adc rnd_col
+  tay
+  txa
+  adc #0
+  tax
+
+  ; just use (63,64) as the pointer now
+  stx $64
+  sty $63
+
+  lda #goodie_char
+  ldy #0
+  sta ($63),y
 
   rts
 
