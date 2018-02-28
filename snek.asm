@@ -39,7 +39,8 @@ tail_dir: .byte $00
 ; for goodie placer
 rnd_row: .byte $00
 rnd_col: .byte $00
-goodie_eaten: .byte $00
+spawn_retry_count: .byte $00
+do_spawn_goodie: .byte $00
 
 ; program ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   org $1000
@@ -150,7 +151,7 @@ game_setup SUBROUTINE game_setup:
   sta tail_dir
 
   lda #$1 ; place a goodie directly after start of game
-  sta goodie_eaten
+  sta do_spawn_goodie
 
   ; setup interrupt handler
   sei ; disable interrupt
@@ -378,6 +379,7 @@ game_loop SUBROUTINE game_loop:
 .move_out:
 
   ; check collision
+  ldx #0 ; x will be set to 1 when a goodie is eaten
   ldy #0
   lda (head_l),y
   cmp #space_char
@@ -388,8 +390,8 @@ game_loop SUBROUTINE game_loop:
   rts ; game over. -- TODO once we have a "life counter", subtract a life and restart
 
 .eat_goodie:
-  lda #1
-  sta goodie_eaten
+  ldx #1
+  stx do_spawn_goodie
 
 .continue:
 
@@ -398,13 +400,8 @@ game_loop SUBROUTINE game_loop:
   ldy #0
   sta (head_l),y
 
-  ; draw tail
-  lda #space_char
-  ldy #0
-  sta (tail_l),y
-
   ; advance tail if no goodie was eaten
-  lda goodie_eaten
+  txa
   cmp #0
   beq .advance_tail ; branch over the jump because branch would be out of range
   jmp .dont_advance_tail
@@ -509,13 +506,15 @@ game_loop SUBROUTINE game_loop:
 
 .dont_advance_tail:
 
-  lda goodie_eaten
-  cmp #0
-  beq .skip_goodie
   jsr place_goodie
-  lda #0
-  sta goodie_eaten
+
 .skip_goodie:
+
+  ; draw tail - do this after placing the goodie, so that goodie won't be placed in a spot where
+  ; it can be deleted right away
+  lda #space_char
+  ldy #0
+  sta (tail_l),y
 
 .timer_loop:
   lda frame_ctr
@@ -531,6 +530,16 @@ game_loop SUBROUTINE game_loop:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 place_goodie SUBROUTINE place_goodie:
+  lda do_spawn_goodie
+  cmp #0
+  bne .do_it
+  rts
+.do_it:
+
+  lda #30 ; try 30 times to spawn a goodie, then give up
+  sta spawn_retry_count
+
+.try_spawn:
   ; load random numbers from SID
   lda $d41b
   and #$0f ; 0..15
@@ -571,11 +580,23 @@ place_goodie SUBROUTINE place_goodie:
   stx $64
   sty $63
 
-  ; TODO don't spawn goodie inside something else
+  ; make sure there's nothing where the goodie will be spawned
+  ldy #0
+  lda ($63),y
+  cmp #space_char
+  beq .spawn_okay
 
+  dec spawn_retry_count
+  beq .dont_place_a_goodie_now ; give up when retry count reaches zero
+  jmp .try_spawn
+
+.spawn_okay:
   lda #goodie_char
   ldy #0
   sta ($63),y
+
+  lda #0
+  sta do_spawn_goodie ; only reset if a goodie was actually spawned
 
 .dont_place_a_goodie_now:
 
