@@ -39,6 +39,7 @@ tail_dir: .byte $00
 ; for goodie placer
 rnd_row: .byte $00
 rnd_col: .byte $00
+goodie_eaten: .byte $00
 
 ; program ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   org $1000
@@ -147,6 +148,9 @@ game_setup SUBROUTINE game_setup:
   sta direction
   sta prev_dir
   sta tail_dir
+
+  lda #$1 ; place a goodie directly after start of game
+  sta goodie_eaten
 
   ; setup interrupt handler
   sei ; disable interrupt
@@ -378,7 +382,14 @@ game_loop SUBROUTINE game_loop:
   lda (head_l),y
   cmp #space_char
   beq .continue
+  cmp #goodie_char
+  beq .eat_goodie
+
   rts ; game over. -- TODO once we have a "life counter", subtract a life and restart
+
+.eat_goodie:
+  lda #1
+  sta goodie_eaten
 
 .continue:
 
@@ -392,7 +403,13 @@ game_loop SUBROUTINE game_loop:
   ldy #0
   sta (tail_l),y
 
-  ; advance tail
+  ; advance tail if no goodie was eaten
+  lda goodie_eaten
+  cmp #0
+  beq .advance_tail ; branch over the jump because branch would be out of range
+  jmp .dont_advance_tail
+.advance_tail:
+
   lda tail_dir
   cmp #0
   beq .tail_north
@@ -489,7 +506,16 @@ game_loop SUBROUTINE game_loop:
   sta tail_dir
 
 .tail_nochange:
+
+.dont_advance_tail:
+
+  lda goodie_eaten
+  cmp #0
+  beq .skip_goodie
   jsr place_goodie
+  lda #0
+  sta goodie_eaten
+.skip_goodie:
 
 .timer_loop:
   lda frame_ctr
@@ -545,9 +571,13 @@ place_goodie SUBROUTINE place_goodie:
   stx $64
   sty $63
 
+  ; TODO don't spawn goodie inside something else
+
   lda #goodie_char
   ldy #0
   sta ($63),y
+
+.dont_place_a_goodie_now:
 
   rts
 
