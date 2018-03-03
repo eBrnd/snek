@@ -33,7 +33,8 @@ tail_l equ $fb
   org $0900
 frame_ctr: .byte $00
 direction: .byte $00
-prev_dir: .byte $00
+prev_dir: .byte $00 ; used for two things: determine what "corner" character to print, and prevent
+                    ; snek from turning back into itself
 tail_dir: .byte $00
 
 ; for goodie placer
@@ -208,7 +209,6 @@ read_input SUBROUTINE read_input:
   lda $dc01 ; joystick port 1
   tax
 
-  ; TODO ignore "backwards"
   and #$1
   cmp #$1
   bne .up
@@ -231,20 +231,35 @@ read_input SUBROUTINE read_input:
   rts ; fall through means no direction pressed, so no change in direction
 
 .up:
+  lda prev_dir
+  cmp #2
+  beq .ignore
   lda #0
   sta direction
   rts
 .down:
+  lda prev_dir
+  cmp #0
+  beq .ignore
   lda #2
   sta direction
   rts
 .left:
+  lda prev_dir
+  cmp #1
+  beq .ignore
   lda #3
   sta direction
   rts
 .right:
+  lda prev_dir
+  cmp #3
+  beq .ignore
   lda #1
   sta direction
+  rts
+
+.ignore:
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
