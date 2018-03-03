@@ -36,6 +36,7 @@ direction: .byte $00
 prev_dir: .byte $00 ; used for two things: determine what "corner" character to print, and prevent
                     ; snek from turning back into itself
 tail_dir: .byte $00
+legacy_mode: .byte $00
 
 ; for goodie placer
 rnd_row: .byte $00
@@ -43,16 +44,86 @@ rnd_col: .byte $00
 spawn_retry_count: .byte $00
 do_spawn_goodie: .byte $00
 
+; macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  MAC print_string ; address, length, screen position
+  ldy #0
+.loop:
+  lda #>{1}
+  sta $64
+  lda #<{1}
+  sta $63
+  lda ($63),y
+
+  ldx #>{3}
+  stx $64
+  ldx #<{3}
+  stx $63
+
+  sta ($63),y
+
+  iny
+  tya
+  cmp #{2}
+  bne .loop
+  ENDM
+
 ; program ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   org $1000
 
 main SUBROUTINE
   jsr setup
-
+  jsr welcome_screen
 .loop_forever:
+
   jsr game_setup
   jsr game_loop
   jmp .loop_forever
+  brk
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+line1 .byte "SNEK"
+line2 .byte "F1 - NORMAL MODE"
+line3 .byte "F3 - LEGACY MODE"
+
+welcome_screen SUBROUTINE welcome_screen:
+  lda #23
+  sta 53272 ; lowercase mode
+
+  print_string line1, 4, $0400
+  print_string line2, 16, $0428
+  print_string line3, 16, $0450
+
+  ; wait for key press
+  sei
+  lda #%11111111
+  sta $dc02 ; DDRA
+  lda #%00000000
+  sta $dc03 ; DDRB
+  lda #%11111110 ; column 0
+  sta $dc00 ; PRA
+.key_loop:
+  ldx $dc01 ; PRB
+  txa
+  and #%00100000 ; row 5 (F3)
+  beq .legacy
+  txa
+  and #%00010000 ; row 4 (F1)
+  beq .normal
+  jmp .key_loop
+
+.normal:
+  cli
+  lda #0
+  sta legacy_mode
+  rts
+
+.legacy:
+  cli
+  lda #1
+  sta legacy_mode
+  rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -132,6 +203,10 @@ draw_sides_out:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 game_setup SUBROUTINE game_setup:
+  lda #21
+  sta 53272 ; uppercase/graphics mode
+  jsr $e544 ; clear screen
+
   jsr draw_border
 
   ; TODO clean inside of play area - and set a nice color for the snake
@@ -150,6 +225,9 @@ game_setup SUBROUTINE game_setup:
   sta direction
   sta prev_dir
   sta tail_dir
+
+  lda #$0
+  sta legacy_mode
 
   lda #$1 ; place a goodie directly after start of game
   sta do_spawn_goodie
