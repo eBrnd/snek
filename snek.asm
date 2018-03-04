@@ -15,6 +15,8 @@ snek_dr set 85
 snek_ur set 74
 space_char set 32 ; free space on game board (= space character)
 goodie_char set 83 ; char for the goodies (= heart)
+score_vc set $20 ; voice control for scoring sound (without gate)
+death_vc set $80 ; voice control for death sound (without gate)
 
 ; autostart ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -305,12 +307,35 @@ game_setup SUBROUTINE game_setup:
 
   cli ; enable interrupt
 
-  ; set SID to noise, for randome number generator
+  ; set SID voice 3 to noise, for random number generator
   lda #$ff
   sta $d40e
   sta $d40f
   lda #$80
   sta $d412
+
+  ; initialize voice 1 for scoring sound
+  lda #$12 ; frequency high byte
+  sta $d401
+  lda #$80 ; frequency low byte
+  sta $d400
+  lda #$07 ; AD
+  sta $d405
+  lda #$00 ; SR
+  sta $d406
+
+  ; initialize voice 2 for death sound
+  lda #$35
+  sta $d408
+  lda #$99
+  sta $d407
+  lda #$0b ; AD
+  sta $d40c
+  lda #$00 ; SR
+  sta $d40d
+
+  lda #$0f ; SID volume (low nibble)
+  sta $d418
 
   rts
 
@@ -522,11 +547,23 @@ game_loop SUBROUTINE game_loop:
   cmp #goodie_char
   beq .eat_goodie
 
+  ; play death sound
+  lda #death_vc
+  sta $d40b
+  lda #death_vc+1
+  sta $d40b
+
   rts ; game over. -- TODO once we have a "life counter", subtract a life and restart
 
 .eat_goodie:
   ldx #1
   stx do_spawn_goodie
+
+  ; play scoring sound
+  lda #score_vc
+  sta $d404
+  lda #score_vc+1 ; voice control register
+  sta $d404
 
 .continue:
 
