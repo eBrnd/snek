@@ -68,14 +68,54 @@ do_spawn_goodie: .byte $00
   bne .loop
   ENDM
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  MAC clean_field ; first, last column, first, last row
+  ; this has to be called before the snek position is initialized, because it clobbers the head
+  ; pointer
+  ldx #>($0400 + ({3} * 40))
+  ldy #<($0400 + ({3} * 40))
+  stx $fe
+  sty $fd
+  ldx #{3}
+
+.row_loop:
+
+  ldy #{1}
+.col_loop:
+  lda #space_char
+  sta ($fd),y
+
+  iny
+  tya
+  cmp #{2}
+  bne .col_loop
+
+  clc
+  lda $fd
+  adc #40
+  sta $fd
+  lda $fe
+  adc #0
+  sta $fe
+
+  inx
+  txa
+  cmp #{4}
+  bne .row_loop
+
+.out:
+  ENDM
+
 ; program ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   org $1000
 
 main SUBROUTINE
   jsr setup
   jsr welcome_screen
-.loop_forever:
+  jsr $e544 ; clear screen
 
+.loop_forever:
   jsr game_setup
   jsr game_loop
   jmp .loop_forever
@@ -205,11 +245,16 @@ draw_sides_out:
 game_setup SUBROUTINE game_setup:
   lda #21
   sta 53272 ; uppercase/graphics mode
-  jsr $e544 ; clear screen
+
+  lda legacy_mode
+  beq .clean_normal
+  clean_field 15, 25, 10, 15
+  jmp .clean_out
+.clean_normal:
+  clean_field 1, 39, 1, 24
+.clean_out:
 
   jsr draw_border
-
-  ; TODO clean inside of play area - and set a nice color for the snake
 
   lda #$5 ; initialize head and tail
   sta head_h
@@ -225,9 +270,6 @@ game_setup SUBROUTINE game_setup:
   sta direction
   sta prev_dir
   sta tail_dir
-
-  lda #$0
-  sta legacy_mode
 
   lda #$1 ; place a goodie directly after start of game
   sta do_spawn_goodie
