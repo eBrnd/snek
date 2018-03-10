@@ -114,6 +114,47 @@ lives: .byte $00,$00
 .out:
   ENDM
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+score_text .byte 147,131,143,146,133,160
+lives_text .byte 140,137,150,133,147,160
+
+  MAC draw_stats ; text, text length, score ptr, destination address
+  print_string {1}, {2}, {4}
+
+  lda {3}+1
+  and #$0f
+  clc
+  adc #inv_zero
+  sta {4}+{2}+3
+  lda {3}+1
+  lsr
+  lsr
+  lsr
+  lsr
+  and #$0f
+  clc
+  adc #inv_zero
+  sta {4}+{2}+2
+  lda {3}
+  and #$0f
+  clc
+  adc #inv_zero
+  sta {4}+{2}+1
+  lda {3}
+  lsr
+  lsr
+  lsr
+  lsr
+  clc
+  adc #inv_zero
+  sta {4}+{2}+0
+
+  ENDM
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 ; program ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   org $1000
 
@@ -245,84 +286,11 @@ draw_sides_out:
   cmp #$c0
   bne .sides_loop
 
-  jsr draw_score
-  jsr draw_lives
+  draw_stats score_text, 6, score, $07c0
+  draw_stats lives_text, 6, lives, $0400
 
   rts
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-score_text .byte 147,131,143,146,133,160
-
-draw_score SUBROUTINE draw_score:
-  print_string score_text, 6, $07c0
-
-  lda score+1
-  and #$0f
-  clc
-  adc #inv_zero
-  sta $07c0+9
-  lda score+1
-  lsr
-  lsr
-  lsr
-  lsr
-  and #$0f
-  clc
-  adc #inv_zero
-  sta $07c0+8
-  lda score
-  and #$0f
-  clc
-  adc #inv_zero
-  sta $07c0+7
-  lda score
-  lsr
-  lsr
-  lsr
-  lsr
-  clc
-  adc #inv_zero
-  sta $07c0+6
-
-  rts
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-lives_text .byte 140,137,150,133,147,160
-
-draw_lives SUBROUTINE draw_lives:
-print
-  print_string lives_text, 6, $0400
-
-  lda lives+1
-  and #$0f
-  clc
-  adc #inv_zero
-  sta $0400+9
-  lda lives+1
-  lsr
-  lsr
-  lsr
-  lsr
-  and #$0f
-  clc
-  adc #inv_zero
-  sta $0400+8
-  lda lives
-  and #$0f
-  clc
-  adc #inv_zero
-  sta $0400+7
-  lda lives
-  lsr
-  lsr
-  lsr
-  lsr
-  clc
-  adc #inv_zero
-  sta $0400+6
-  rts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 game_setup SUBROUTINE game_setup:
@@ -657,7 +625,7 @@ game_loop SUBROUTINE game_loop:
   sta score
   cld
 
-  jsr draw_score
+  draw_stats score_text, 6, score, $07c0
 
 .continue:
 
