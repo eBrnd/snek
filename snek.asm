@@ -47,8 +47,9 @@ rnd_col: .byte $00
 spawn_retry_count: .byte $00
 do_spawn_goodie: .byte $00
 
-; score counter
+; score and live counter
 score: .byte $00,$00
+lives: .byte $00,$00
 
 ; macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -245,6 +246,7 @@ draw_sides_out:
   bne .sides_loop
 
   jsr draw_score
+  jsr draw_lives
 
   rts
 
@@ -285,6 +287,42 @@ draw_score SUBROUTINE draw_score:
 
   rts
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+lives_text .byte 140,137,150,133,147,160
+
+draw_lives SUBROUTINE draw_lives:
+print
+  print_string lives_text, 6, $0400
+
+  lda lives+1
+  and #$0f
+  clc
+  adc #inv_zero
+  sta $0400+9
+  lda lives+1
+  lsr
+  lsr
+  lsr
+  lsr
+  and #$0f
+  clc
+  adc #inv_zero
+  sta $0400+8
+  lda lives
+  and #$0f
+  clc
+  adc #inv_zero
+  sta $0400+7
+  lda lives
+  lsr
+  lsr
+  lsr
+  lsr
+  clc
+  adc #inv_zero
+  sta $0400+6
+  rts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 game_setup SUBROUTINE game_setup:
