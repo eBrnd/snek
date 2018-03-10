@@ -18,6 +18,9 @@ goodie_char set 83 ; char for the goodies (= heart)
 score_vc set $20 ; voice control for scoring sound (without gate)
 death_vc set $80 ; voice control for death sound (without gate)
 inv_zero set 176 ; inverted "0" character for score and lives output
+speed_slow set 10
+speed_normal set 6
+speed_fast set 4
 
 ; autostart ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -40,6 +43,7 @@ prev_dir: .byte $00 ; used for two things: determine what "corner" character to 
                     ; snek from turning back into itself
 tail_dir: .byte $00
 legacy_mode: .byte $00
+speed: .byte $00
 
 ; for goodie placer
 rnd_row: .byte $00
@@ -191,6 +195,7 @@ main SUBROUTINE
 line1 .byte "SNEK"
 line2 .byte "F1 - NORMAL MODE"
 line3 .byte "F3 - LEGACY MODE"
+line4 .byte "F5 - CHANGE SPEED"
 
 welcome_screen SUBROUTINE welcome_screen:
   lda #23
@@ -199,6 +204,9 @@ welcome_screen SUBROUTINE welcome_screen:
   print_string line1, 4, $0400
   print_string line2, 16, $0428
   print_string line3, 16, $0450
+  print_string line4, 17, $0478
+
+  jsr print_speed
 
   ; wait for key press
   sei
@@ -210,6 +218,9 @@ welcome_screen SUBROUTINE welcome_screen:
   sta $dc00 ; PRA
 .key_loop:
   ldx $dc01 ; PRB
+  txa
+  and #%01000000 ; row 6 (F5)
+  beq .change_speed
   txa
   and #%00100000 ; row 5 (F3)
   beq .legacy
@@ -228,6 +239,65 @@ welcome_screen SUBROUTINE welcome_screen:
   cli
   lda #1
   sta legacy_mode
+  rts
+
+.change_speed:
+.wait_key_release:
+  lda $dc01 ; PRB
+  and #%01000000 ; row 6 (F5)
+  beq .wait_key_release
+
+  jsr change_speed
+  jsr print_speed
+  jmp .key_loop
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+slow .byte   " SLOW "
+medium .byte "MEDIUM"
+fast .byte   " FAST "
+
+print_speed SUBROUTINE print_speed:
+  lda speed
+  cmp #speed_slow
+  beq .slow
+  cmp #speed_normal
+  beq .medium
+
+  ; fast
+  print_string fast, 6, $04a0
+  rts
+
+.slow:
+  print_string slow, 6, $04a0
+  rts
+
+.medium:
+  print_string medium, 6, $04a0
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+change_speed SUBROUTINE change_speed:
+  lda speed
+  cmp #speed_slow
+  beq .set_normal
+  cmp #speed_normal
+  beq .set_fast
+
+  ; set_slow
+  lda #speed_slow
+  sta speed
+  rts
+
+.set_normal:
+  lda #speed_normal
+  sta speed
+  rts
+
+.set_fast
+  lda #speed_fast
+  sta speed
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -275,6 +345,11 @@ setup SUBROUTINE setup:
   sta $d020
   lda #bg_color
   sta $d021
+
+  ; speed needs to be initialized before welcome_screen, so we do it here
+  lda #speed_normal
+  sta speed
+
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -841,7 +916,7 @@ game_loop SUBROUTINE game_loop:
 
 .timer_loop:
   lda frame_ctr
-  cmp #30
+  cmp speed
   bne .timer_loop
   lda #0
   sta frame_ctr
