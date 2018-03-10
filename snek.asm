@@ -119,14 +119,14 @@ lives: .byte $00,$00
 score_text .byte 147,131,143,146,133,160
 lives_text .byte 140,137,150,133,147,160
 
-  MAC draw_stats ; text, text length, score ptr, destination address
+  MAC draw_stats ; text, text length, score ptr, destination address, digits (2 or 4)
   print_string {1}, {2}, {4}
 
   lda {3}+1
   and #$0f
   clc
   adc #inv_zero
-  sta {4}+{2}+3
+  sta {4}+{2}+{5}-2+1
   lda {3}+1
   lsr
   lsr
@@ -135,7 +135,8 @@ lives_text .byte 140,137,150,133,147,160
   and #$0f
   clc
   adc #inv_zero
-  sta {4}+{2}+2
+  sta {4}+{2}+{5}-2+0
+  IF {5} > 2
   lda {3}
   and #$0f
   clc
@@ -149,6 +150,7 @@ lives_text .byte 140,137,150,133,147,160
   clc
   adc #inv_zero
   sta {4}+{2}+0
+  EIF
 
   ENDM
 
@@ -305,8 +307,8 @@ draw_sides_out:
   cmp #$c0
   bne .sides_loop
 
-  draw_stats score_text, 6, score, $07c0
-  draw_stats lives_text, 6, lives, $0400
+  draw_stats score_text, 6, score, $07c0, 4
+  draw_stats lives_text, 6, lives, $0400, 2
 
   rts
 
@@ -677,7 +679,7 @@ game_loop SUBROUTINE game_loop:
   sta score
   cld
 
-  draw_stats score_text, 6, score, $07c0
+  draw_stats score_text, 6, score, $07c0, 4
 
 .continue:
 
