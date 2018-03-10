@@ -165,8 +165,27 @@ main SUBROUTINE
 
 .loop_forever:
   jsr game_setup
+.loop_round:
+  jsr round_setup
   jsr game_loop
-  jmp .loop_forever
+
+  ; account for lives
+  sed
+  lda lives+1
+  sec
+  sbc #1
+  sta lives+1
+  lda lives
+  sbc #0
+  sta lives
+  cld
+
+  ; new round if >0 lives left
+  lda lives+1
+  bne .loop_round
+  lda lives
+  bne .loop_round
+
   brk
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -298,14 +317,47 @@ game_setup SUBROUTINE game_setup:
   sta 53272 ; uppercase/graphics mode
 
   lda legacy_mode
-  beq .clean_normal
-  clean_field 15, 25, 10, 15
-  jmp .clean_out
-.clean_normal:
-  clean_field 1, 39, 1, 24
-.clean_out:
+  beq .setup_normal
+
+  ; legacy mode specific setup
+  lda #$00
+  sta score
+  sta score+1
+  sta lives
+  lda #$24 ; 24 lives (BCD)
+  sta lives+1
+  jmp .setup_leg_out
+
+.setup_normal: ; corresponding normal mode setup
+  lda #$00
+  sta score
+  sta score+1
+  sta lives
+  lda #3
+  sta lives+1
+  jmp .setup_leg_out
+
+.setup_leg_out:
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+round_setup SUBROUTINE round_setup:
 
   jsr draw_border
+
+  lda legacy_mode
+  beq .clean_normal
+
+  ; legacy mode specific setup
+  clean_field 15, 25, 10, 15
+  jmp .clean_out
+
+.clean_normal: ; corresponding normal mode setup
+  clean_field 1, 39, 1, 24
+  jmp .clean_out
+
+.clean_out:
 
   lda #$5 ; initialize head and tail
   sta head_h
@@ -602,7 +654,7 @@ game_loop SUBROUTINE game_loop:
   lda #death_vc+1
   sta $d40b
 
-  rts ; game over. -- TODO once we have a "life counter", subtract a life and restart
+  rts ; game over.
 
 .eat_goodie:
   ldx #1
