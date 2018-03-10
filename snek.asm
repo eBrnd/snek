@@ -17,6 +17,7 @@ space_char set 32 ; free space on game board (= space character)
 goodie_char set 83 ; char for the goodies (= heart)
 score_vc set $20 ; voice control for scoring sound (without gate)
 death_vc set $80 ; voice control for death sound (without gate)
+inv_zero set 176 ; inverted "0" character for score and lives output
 
 ; autostart ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -45,6 +46,9 @@ rnd_row: .byte $00
 rnd_col: .byte $00
 spawn_retry_count: .byte $00
 do_spawn_goodie: .byte $00
+
+; score counter
+score: .byte $00,$00
 
 ; macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -239,6 +243,45 @@ draw_sides_out:
   lda $fb
   cmp #$c0
   bne .sides_loop
+
+  jsr draw_score
+
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+score_text .byte 147,131,143,146,133,160
+
+draw_score SUBROUTINE draw_score:
+  print_string score_text, 6, $07c0
+
+  lda score+1
+  and #$0f
+  clc
+  adc #inv_zero
+  sta $07c0+9
+  lda score+1
+  lsr
+  lsr
+  lsr
+  lsr
+  and #$0f
+  clc
+  adc #inv_zero
+  sta $07c0+8
+  lda score
+  and #$0f
+  clc
+  adc #inv_zero
+  sta $07c0+7
+  lda score
+  lsr
+  lsr
+  lsr
+  lsr
+  clc
+  adc #inv_zero
+  sta $07c0+6
 
   rts
 
@@ -564,6 +607,19 @@ game_loop SUBROUTINE game_loop:
   sta $d404
   lda #score_vc+1 ; voice control register
   sta $d404
+
+  ; increase score
+  sed ; BCD mode
+  lda score+1
+  clc
+  adc #1
+  sta score+1
+  lda score
+  adc #0
+  sta score
+  cld
+
+  jsr draw_score
 
 .continue:
 
