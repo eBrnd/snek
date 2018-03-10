@@ -49,7 +49,7 @@ do_spawn_goodie: .byte $00
 
 ; score and live counter
 score: .byte $00,$00
-lives: .byte $00,$00
+lives: .byte $00
 
 ; macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -122,12 +122,12 @@ lives_text .byte 140,137,150,133,147,160
   MAC draw_stats ; text, text length, score ptr, destination address, digits (2 or 4)
   print_string {1}, {2}, {4}
 
-  lda {3}+1
+  lda {3}
   and #$0f
   clc
   adc #inv_zero
   sta {4}+{2}+{5}-2+1
-  lda {3}+1
+  lda {3}
   lsr
   lsr
   lsr
@@ -137,12 +137,12 @@ lives_text .byte 140,137,150,133,147,160
   adc #inv_zero
   sta {4}+{2}+{5}-2+0
   IF {5} > 2
-  lda {3}
+  lda {3}+1
   and #$0f
   clc
   adc #inv_zero
   sta {4}+{2}+1
-  lda {3}
+  lda {3}+1
   lsr
   lsr
   lsr
@@ -173,20 +173,14 @@ main SUBROUTINE
 
   ; account for lives
   sed
-  lda lives+1
   sec
-  sbc #1
-  sta lives+1
   lda lives
-  sbc #0
+  sbc #1
   sta lives
   cld
+  bne .loop_round ; new round if >0 lives left
 
-  ; new round if >0 lives left
-  lda lives+1
-  bne .loop_round
-  lda lives
-  bne .loop_round
+  jmp .loop_forever
 
   brk
 
@@ -325,18 +319,16 @@ game_setup SUBROUTINE game_setup:
   lda #$00
   sta score
   sta score+1
-  sta lives
   lda #$24 ; 24 lives (BCD)
-  sta lives+1
+  sta lives
   jmp .setup_leg_out
 
 .setup_normal: ; corresponding normal mode setup
   lda #$00
   sta score
   sta score+1
-  sta lives
   lda #3
-  sta lives+1
+  sta lives
   jmp .setup_leg_out
 
 .setup_leg_out:
@@ -670,13 +662,13 @@ game_loop SUBROUTINE game_loop:
 
   ; increase score
   sed ; BCD mode
-  lda score+1
+  lda score
   clc
   adc #1
-  sta score+1
-  lda score
-  adc #0
   sta score
+  lda score+1
+  adc #0
+  sta score+1
   cld
 
   draw_stats score_text, 6, score, $07c0, 4
