@@ -162,10 +162,11 @@ lives_text .byte 140,137,150,133,147,160
 
 main SUBROUTINE
   jsr setup
+
+.loop_forever:
   jsr welcome_screen
   jsr $e544 ; clear screen
 
-.loop_forever:
   jsr game_setup
 .loop_round:
   jsr round_setup
@@ -180,6 +181,7 @@ main SUBROUTINE
   cld
   bne .loop_round ; new round if >0 lives left
 
+  jsr game_over
   jmp .loop_forever
 
   brk
@@ -226,6 +228,43 @@ welcome_screen SUBROUTINE welcome_screen:
   cli
   lda #1
   sta legacy_mode
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+game_over_msg_1 .byte "GAME OVER"
+game_over_msg_2 .byte "FIRE TO RESTART"
+
+game_over SUBROUTINE game_over:
+  jsr $e544 ; clear screen
+  lda #23
+  sta 53272 ; lowercase mode
+
+  print_string game_over_msg_1, 9, $0428
+  print_string game_over_msg_2, 15, $0450
+
+  draw_stats score_text, 6, score, $0478, 4
+
+.loop_press:
+  lda $dc01 ; joystick port 1
+  and #$10
+  bne .loop_press
+
+  ldx #2 ; wait for raster line to appear twice
+.debounce_loop:
+.raster_loop:
+  lda $d012
+  cmp #$ff
+  bne .raster_loop
+  dex
+  bne .debounce_loop
+
+  ; wait until button is released, so it doesn't misfire F1
+.loop_release:
+  lda $dc01
+  and #$10
+  beq .loop_release
+
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -431,6 +470,10 @@ round_setup SUBROUTINE round_setup:
 
   lda #$0f ; SID volume (low nibble)
   sta $d418
+
+  ; reset frame counter
+  lda #0
+  sta frame_ctr
 
   rts
 
