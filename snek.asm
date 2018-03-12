@@ -63,9 +63,9 @@ ws_sprite_base: .byte $00, $00
   MAC show_sprite ; index; address
   lda #{2}/64
   sta $07f8+{1} ; set sprite ptr
-  lda #100
+  lda #187
   sta $d001+2*{1} ; y coord
-  lda $8 ; color
+  lda $1 ; color
   sta $d027+{1}
   ENDM
 
@@ -271,14 +271,14 @@ main SUBROUTINE
 title_screen SUBROUTINE title_screen:
   jsr draw_image
 
-; show_sprite 0, sprite1
-; show_sprite 1, sprite2
-; show_sprite 2, sprite3
-; show_sprite 3, sprite4
-; show_sprite 4, sprite5
-; show_sprite 5, sprite6
-; show_sprite 6, sprite7
-; show_sprite 7, sprite8
+  show_sprite 0, sprite1
+  show_sprite 1, sprite2
+  show_sprite 2, sprite3
+  show_sprite 3, sprite4
+  show_sprite 4, sprite5
+  show_sprite 5, sprite6
+  show_sprite 6, sprite7
+  show_sprite 7, sprite8
 
   ; install title screen interrupt handler
   sei ; disable interrupt
