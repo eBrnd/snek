@@ -239,6 +239,7 @@ main SUBROUTINE
   jsr setup
 
 .loop_forever:
+  jsr title_screen
   jsr welcome_screen
   jsr $e544 ; clear screen
 
@@ -267,33 +268,19 @@ main SUBROUTINE
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-line1 .byte "SNEK"
-line2 .byte "F1 - NORMAL MODE"
-line3 .byte "F3 - LEGACY MODE"
-line4 .byte "F5 - CHANGE SPEED"
+title_screen SUBROUTINE title_screen:
+  jsr draw_image
 
-welcome_screen SUBROUTINE welcome_screen:
+; show_sprite 0, sprite1
+; show_sprite 1, sprite2
+; show_sprite 2, sprite3
+; show_sprite 3, sprite4
+; show_sprite 4, sprite5
+; show_sprite 5, sprite6
+; show_sprite 6, sprite7
+; show_sprite 7, sprite8
 
-  lda #23
-  sta 53272 ; lowercase mode
-
-  print_string line1, 4, $0400
-  print_string line2, 16, $0428
-  print_string line3, 16, $0450
-  print_string line4, 17, $0478
-
-  jsr print_speed
-
-  show_sprite 0, sprite1
-  show_sprite 1, sprite2
-  show_sprite 2, sprite3
-  show_sprite 3, sprite4
-  show_sprite 4, sprite5
-  show_sprite 5, sprite6
-  show_sprite 6, sprite7
-  show_sprite 7, sprite8
-
-  ; install welcome screen interrupt handler
+  ; install title screen interrupt handler
   sei ; disable interrupt
 
   lda #$7f ; disable cia I, II, and VIC interrupts
@@ -303,15 +290,8 @@ welcome_screen SUBROUTINE welcome_screen:
   lda #$01 ; enable raster interrupt
   sta $d01a
 
-  lda #$1b ; single color text mode
-  ldx #$08
-  ldy #$17 ; lowercase mode
-  sta $d011
-  stx $d016
-  sty $d018
-
-  lda #<ws_irq ; install our interrupt handler
-  ldx #>ws_irq
+  lda #<ts_irq ; install our interrupt handler
+  ldx #>ts_irq
   sta $0314
   stx $0315
 
@@ -323,6 +303,45 @@ welcome_screen SUBROUTINE welcome_screen:
   asl $d019
 
   cli ; enable interrupt
+
+  jsr wait_fire
+
+  ; disable raster interrupt
+  sei
+  lda #$00
+  sta $d01a
+  cli
+
+  ; reset graphics mode
+  lda #$1b ; single color text mode
+  ldx #$08
+  ldy #$14
+  sta $d011
+  stx $d016
+  sty $d018
+
+  jsr $e544 ; clear screen
+  lda #23
+  sta 53272 ; lowercase mode
+
+  rts
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+line1 .byte "SNEK"
+line2 .byte "F1 - NORMAL MODE"
+line3 .byte "F3 - LEGACY MODE"
+line4 .byte "F5 - CHANGE SPEED"
+
+welcome_screen SUBROUTINE welcome_screen:
+
+  print_string line1, 4, $0400
+  print_string line2, 16, $0428
+  print_string line3, 16, $0450
+  print_string line4, 17, $0478
+
+  jsr print_speed
 
   ; wait for key press
   sei
@@ -370,6 +389,59 @@ welcome_screen SUBROUTINE welcome_screen:
   debounce_loop
 
   jmp .key_loop
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+draw_image SUBROUTINE draw_image:
+  lda $40d0
+  sta $d020
+  sta $d021
+
+  ldx #$00
+.img_loop:
+  ; charmem
+  lda $3a40,x
+  sta $0400,x
+  lda $3b40,x
+  sta $0500,x
+  lda $3c40,x
+  sta $0600,x
+
+  txa ; the lower part of the bitmap doesn't exist, so we would display garbage there. we just fill
+  sec ; the charmem with the background color, so the garbage is invisible.
+  sbc #$20
+  bcc .load
+  lda #$dd
+  jmp .noload
+.load:
+  lda $3d40,x
+.noload:
+  sta $0700,x
+
+  ; colormem
+  lda $3d88,x
+  sta $d800,x
+  lda $3e88,x
+  sta $d900,x
+  lda $3f88,x
+  sta $da00,x
+
+  ; same as above - make the garbage invisible. since colormem is not used in the lower part of the
+  lda #$dd ; bitmap anyway (it's just a thick bar only using a color from charmem), we don't have
+  sta $db00,x ; to bother copying anything and can fill it with the background color
+
+  inx
+  bne .img_loop
+
+  lda #$3b ; bitmap mode
+  sta $d011
+  lda #$18 ; multicolor mode
+  sta $d016
+
+  lda #$18 ; screen ram at 400, bitmap at 2000
+  sta $d018
+
+  rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -435,6 +507,14 @@ game_over SUBROUTINE game_over:
 
   draw_stats score_text, 6, score, $0478, 4
 
+  jsr wait_fire
+
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+wait_fire SUBROUTINE wait_fire:
+
 .loop_press:
   lda $dc01 ; joystick port 1
   and #$10
@@ -449,7 +529,6 @@ game_over SUBROUTINE game_over:
   beq .loop_release
 
   debounce_loop
-
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -677,7 +756,7 @@ irq: ; interrupt handler
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-ws_irq: ; interrupt handler for welcome screen
+ts_irq: ; interrupt handler for title screen
   ; move sprites to the left
   sec
   lda ws_sprite_base
@@ -1154,20 +1233,23 @@ place_goodie SUBROUTINE place_goodie:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  org $2000
-sprite1 ALIGN 64
-sprite1 .byte $70,$00,$00, $98,$00,$00, $b8,$00,$00, $f8,$00,$00, $f8,$00,$00, $f8,$00,$00, $f8,$00,$00, $f8,$00,$70, $ff,$80,$98, $ff,$c0,$b8, $ff,$f0,$f8, $f8,$fc,$f8, $f8,$3e,$f8, $f8,$3e,$7e, $f8,$3e,$1f, $f8,$3e,$07, $f8,$3e,$07, $f8,$fc,$0f, $ff,$f0,$1f, $ff,$c0,$1f, $7f,$80,$0e
-sprite2 ALIGN 64
-sprite2 .byte $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $1c,$00,$00, $26,$00,$03, $2e,$00,$07, $3e,$00,$1f, $3e,$00,$fc, $3e,$01,$38, $fc,$01,$7f, $f0,$01,$ff, $c0,$01,$ff, $c0,$01,$f8, $80,$00,$fe, $00,$00,$1f, $00,$00,$07, $00,$00,$03
-sprite3 ALIGN 64
-sprite3 .byte $00,$1f,$f8, $00,$27,$fc, $00,$2f,$ff, $00,$3f,$0f, $00,$3f,$03, $00,$3f,$03, $00,$3f,$03, $00,$3f,$0f, $c0,$3f,$ff, $e0,$3f,$fc, $f8,$3f,$ff, $3f,$3f,$0f, $1f,$bf,$03, $ff,$3f,$03, $f8,$3f,$03, $c0,$3f,$03, $00,$3f,$03, $00,$3f,$0f, $ff,$3f,$ff, $ff,$bf,$fe, $ff,$1f,$fc
-sprite4 ALIGN 64
-sprite4 .byte $00,$00,$00, $00,$00,$00, $00,$00,$00, $e0,$00,$00, $f0,$00,$00, $f0,$00,$00, $f0,$00,$00, $e0,$00,$00, $03,$ff,$1f, $04,$ff,$a7, $05,$ff,$2f, $e7,$f8,$3f, $f7,$e0,$3f, $f7,$e0,$3f, $f7,$e0,$3f, $f7,$e0,$3f, $f7,$e0,$3f, $e7,$e0,$3f, $07,$e0,$3f, $07,$e0,$3f, $03,$c0,$1e
-sprite5 ALIGN 64
-sprite5 .byte $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $f8,$00,$0f, $fc,$00,$7f, $ff,$00,$7f, $0f,$e3,$f8, $03,$f4,$e0, $03,$f5,$e0, $03,$f7,$e0, $03,$f7,$e0, $03,$f7,$e0, $03,$f3,$f8, $03,$f0,$7f, $03,$f0,$1f, $01,$e0,$0f
-sprite6 ALIGN 64
-sprite6 .byte $3c,$00,$07, $4c,$00,$0f, $5e,$00,$3f, $7e,$00,$fd, $7e,$01,$30, $7e,$01,$70, $7e,$00,$e0, $7e,$00,$01, $fe,$00,$03, $fe,$00,$07, $fe,$00,$0f, $7e,$00,$1f, $7e,$00,$3e, $7e,$00,$7c, $7e,$00,$f8, $7e,$01,$f0, $7e,$01,$f0, $7e,$01,$f0, $fe,$01,$ff, $fe,$01,$ff, $fc,$01,$ff
-sprite7 ALIGN 64
-sprite7 .byte $00,$07,$00, $80,$0f,$80, $e0,$3f,$e0, $f8,$fd,$f8, $7d,$30,$7d, $7d,$70,$7c, $7d,$f0,$7c, $f9,$f0,$7c, $e1,$f7,$7c, $c1,$f5,$7c, $81,$f7,$7c, $01,$f0,$7c, $01,$f0,$7c, $01,$f0,$7c, $01,$f0,$7c, $01,$f0,$7c, $01,$f0,$7c, $00,$fd,$f8, $fc,$3f,$e0, $fc,$0f,$80, $fc,$07,$00
-sprite8 ALIGN 64
-sprite8 .byte $0e,$01,$c0, $13,$03,$e0, $77,$0f,$f8, $ff,$3f,$7e, $ff,$4c,$1f, $ff,$5c,$1f, $1f,$7c,$1f, $1f,$3f,$7e, $1f,$0f,$f8, $1f,$03,$e0, $1f,$0f,$f8, $1f,$3f,$7e, $1f,$4c,$1f, $1f,$5c,$1f, $1f,$7c,$1f, $1f,$7c,$1f, $1f,$7c,$1f, $1f,$3f,$7e, $1f,$0f,$f8, $1f,$03,$e0, $0e,$01,$c0
+;   org $2000
+; sprite1 ALIGN 64
+; sprite1 .byte $70,$00,$00, $98,$00,$00, $b8,$00,$00, $f8,$00,$00, $f8,$00,$00, $f8,$00,$00, $f8,$00,$00, $f8,$00,$70, $ff,$80,$98, $ff,$c0,$b8, $ff,$f0,$f8, $f8,$fc,$f8, $f8,$3e,$f8, $f8,$3e,$7e, $f8,$3e,$1f, $f8,$3e,$07, $f8,$3e,$07, $f8,$fc,$0f, $ff,$f0,$1f, $ff,$c0,$1f, $7f,$80,$0e
+; sprite2 ALIGN 64
+; sprite2 .byte $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $1c,$00,$00, $26,$00,$03, $2e,$00,$07, $3e,$00,$1f, $3e,$00,$fc, $3e,$01,$38, $fc,$01,$7f, $f0,$01,$ff, $c0,$01,$ff, $c0,$01,$f8, $80,$00,$fe, $00,$00,$1f, $00,$00,$07, $00,$00,$03
+; sprite3 ALIGN 64
+; sprite3 .byte $00,$1f,$f8, $00,$27,$fc, $00,$2f,$ff, $00,$3f,$0f, $00,$3f,$03, $00,$3f,$03, $00,$3f,$03, $00,$3f,$0f, $c0,$3f,$ff, $e0,$3f,$fc, $f8,$3f,$ff, $3f,$3f,$0f, $1f,$bf,$03, $ff,$3f,$03, $f8,$3f,$03, $c0,$3f,$03, $00,$3f,$03, $00,$3f,$0f, $ff,$3f,$ff, $ff,$bf,$fe, $ff,$1f,$fc
+; sprite4 ALIGN 64
+; sprite4 .byte $00,$00,$00, $00,$00,$00, $00,$00,$00, $e0,$00,$00, $f0,$00,$00, $f0,$00,$00, $f0,$00,$00, $e0,$00,$00, $03,$ff,$1f, $04,$ff,$a7, $05,$ff,$2f, $e7,$f8,$3f, $f7,$e0,$3f, $f7,$e0,$3f, $f7,$e0,$3f, $f7,$e0,$3f, $f7,$e0,$3f, $e7,$e0,$3f, $07,$e0,$3f, $07,$e0,$3f, $03,$c0,$1e
+; sprite5 ALIGN 64
+; sprite5 .byte $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $00,$00,$00, $f8,$00,$0f, $fc,$00,$7f, $ff,$00,$7f, $0f,$e3,$f8, $03,$f4,$e0, $03,$f5,$e0, $03,$f7,$e0, $03,$f7,$e0, $03,$f7,$e0, $03,$f3,$f8, $03,$f0,$7f, $03,$f0,$1f, $01,$e0,$0f
+; sprite6 ALIGN 64
+; sprite6 .byte $3c,$00,$07, $4c,$00,$0f, $5e,$00,$3f, $7e,$00,$fd, $7e,$01,$30, $7e,$01,$70, $7e,$00,$e0, $7e,$00,$01, $fe,$00,$03, $fe,$00,$07, $fe,$00,$0f, $7e,$00,$1f, $7e,$00,$3e, $7e,$00,$7c, $7e,$00,$f8, $7e,$01,$f0, $7e,$01,$f0, $7e,$01,$f0, $fe,$01,$ff, $fe,$01,$ff, $fc,$01,$ff
+; sprite7 ALIGN 64
+; sprite7 .byte $00,$07,$00, $80,$0f,$80, $e0,$3f,$e0, $f8,$fd,$f8, $7d,$30,$7d, $7d,$70,$7c, $7d,$f0,$7c, $f9,$f0,$7c, $e1,$f7,$7c, $c1,$f5,$7c, $81,$f7,$7c, $01,$f0,$7c, $01,$f0,$7c, $01,$f0,$7c, $01,$f0,$7c, $01,$f0,$7c, $01,$f0,$7c, $00,$fd,$f8, $fc,$3f,$e0, $fc,$0f,$80, $fc,$07,$00
+; sprite8 ALIGN 64
+; sprite8 .byte $0e,$01,$c0, $13,$03,$e0, $77,$0f,$f8, $ff,$3f,$7e, $ff,$4c,$1f, $ff,$5c,$1f, $1f,$7c,$1f, $1f,$3f,$7e, $1f,$0f,$f8, $1f,$03,$e0, $1f,$0f,$f8, $1f,$3f,$7e, $1f,$4c,$1f, $1f,$5c,$1f, $1f,$7c,$1f, $1f,$7c,$1f, $1f,$7c,$1f, $1f,$3f,$7e, $1f,$0f,$f8, $1f,$03,$e0, $0e,$01,$c0
+
+  org $2000-2
+  incbin "snek_title_short.prg"
