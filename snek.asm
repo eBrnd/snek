@@ -639,6 +639,11 @@ game_setup SUBROUTINE game_setup:
   lda #21
   sta 53272 ; uppercase/graphics mode
 
+  lda #border_color
+  sta $d020
+  lda #bg_color
+  sta $d021
+
   lda legacy_mode
   beq .setup_normal
 
