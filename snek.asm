@@ -524,7 +524,7 @@ game_over SUBROUTINE game_over:
 wait_fire SUBROUTINE wait_fire:
 
 .loop_press:
-  lda $dc01 ; joystick port 1
+  lda $dc00 ; joystick port 2
   and #$10
   bne .loop_press
 
@@ -532,7 +532,7 @@ wait_fire SUBROUTINE wait_fire:
 
   ; wait until button is released, so it doesn't misfire F1
 .loop_release:
-  lda $dc01
+  lda $dc00
   and #$10
   beq .loop_release
 
@@ -716,6 +716,10 @@ round_setup SUBROUTINE round_setup:
   lda $dd0d
   asl $d019
 
+  ; setup data direction register so it can read joystick 2
+  lda #%00000000
+  sta $dc02 ; DDRA
+
   cli ; enable interrupt
 
   ; set SID voice 3 to noise, for random number generator
@@ -806,7 +810,7 @@ ts_irq: ; interrupt handler for title screen
 
 read_input SUBROUTINE read_input:
   ; reads the joystick and adjusts the snek direction accordingly
-  lda $dc01 ; joystick port 1
+  lda $dc00 ; joystick port 2
   tax
 
   and #$1
