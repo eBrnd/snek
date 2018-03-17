@@ -302,6 +302,9 @@ title_screen SUBROUTINE title_screen:
   lda $dd0d
   asl $d019
 
+  ; initialize music
+  jsr $4400
+
   cli ; enable interrupt
 
   jsr wait_fire
@@ -311,6 +314,10 @@ title_screen SUBROUTINE title_screen:
   lda #$00
   sta $d01a
   cli
+
+  ; stop music
+  lda #$00 ; SID volume (low nibble)
+  sta $d418
 
   ; reset graphics mode
   lda #$1b ; single color text mode
@@ -757,6 +764,9 @@ irq: ; interrupt handler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ts_irq: ; interrupt handler for title screen
+  ; play music
+  jsr $4403
+
   ; move sprites to the left
   sec
   lda ws_sprite_base
@@ -1244,3 +1254,6 @@ place_goodie SUBROUTINE place_goodie:
 
   org $4088
   incbin "snek_title_short_colormem.prg"
+
+  org $4400-2
+  incbin "intro.prg"
