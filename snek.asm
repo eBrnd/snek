@@ -317,8 +317,12 @@ title_screen SUBROUTINE title_screen:
   cli
 
   ; stop music
-  lda #$00 ; SID volume (low nibble)
-  sta $d418
+  lda #$00
+  sta $d418 ; SID volume (low nibble)
+  sta $d417 ; filter mask (low nibble)
+  sta $d404 ; close gates
+  sta $d40b
+  sta $d412
 
   ; reset graphics mode
   lda #$1b ; single color text mode
