@@ -139,11 +139,11 @@ ws_sprite_base: .byte $00, $00
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  MAC clean_field ; first, last column, first, last row
+  MAC clean_field ; first, last column, first, last row, base address, code
   ; this has to be called before the snek position is initialized, because it clobbers the head
   ; pointer
-  ldx #>($0400 + ({3} * 40))
-  ldy #<($0400 + ({3} * 40))
+  ldx #>({5} + ({3} * 40))
+  ldy #<({5} + ({3} * 40))
   stx $fe
   sty $fd
   ldx #{3}
@@ -152,7 +152,7 @@ ws_sprite_base: .byte $00, $00
 
   ldy #{1}
 .col_loop:
-  lda #space_char
+  lda #{6}
   sta ($fd),y
 
   iny
@@ -245,8 +245,12 @@ main SUBROUTINE
   lda #$00
   sta $d015
 
+  jsr set_text_color
+
   jsr welcome_screen
   jsr $e544 ; clear screen
+
+  jsr set_text_color
 
   jsr game_setup
 .loop_round:
@@ -262,10 +266,20 @@ main SUBROUTINE
   cld
   bne .loop_round ; new round if >0 lives left
 
+  jsr $e544 ; clear screen
+  jsr set_text_color
+
   jsr game_over
   jmp .loop_forever
 
   brk
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+set_text_color SUBROUTINE set_text_color:
+  ; set char color for inside of field
+  clean_field 0, 40, 0, 40, $d800, 0
+  rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -521,7 +535,6 @@ game_over_msg_2 .byte "FIRE TO RESTART"
 uppercase_score .byte 211,195,207,210,197,224
 
 game_over SUBROUTINE game_over:
-  jsr $e544 ; clear screen
   lda #23
   sta 53272 ; lowercase mode
 
@@ -680,11 +693,11 @@ round_setup SUBROUTINE round_setup:
   beq .clean_normal
 
   ; legacy mode specific setup
-  clean_field 15, 25, 8, 14
+  clean_field 15, 25, 8, 14, $0400, space_char
   jmp .clean_out
 
 .clean_normal: ; corresponding normal mode setup
-  clean_field 1, 39, 1, 24
+  clean_field 1, 39, 1, 24, $0400, space_char
   jmp .clean_out
 
 .clean_out:
