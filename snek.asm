@@ -660,7 +660,7 @@ round_setup SUBROUTINE round_setup:
   beq .clean_normal
 
   ; legacy mode specific setup
-  clean_field 15, 25, 10, 15
+  clean_field 15, 25, 8, 14
   jmp .clean_out
 
 .clean_normal: ; corresponding normal mode setup
