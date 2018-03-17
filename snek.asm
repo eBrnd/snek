@@ -342,12 +342,22 @@ line2 .byte "F1 - NORMAL MODE"
 line3 .byte "F3 - LEGACY MODE"
 line4 .byte "F5 - CHANGE SPEED"
 
+info0 .byte 5,2,18,14,4,46,4,5
+info1 .byte 3,8,1,15,19,45,9,14,11,12,46,4,5
+info2 .byte 18,5,20,18,15,45,1,11,20,9,22,46,4,5
+info3 .byte 7,9,20,8,21,2,46,3,15,13,47,5,2,18,14,4,47,19,14,5,11
+
 welcome_screen SUBROUTINE welcome_screen:
 
-  print_string line1, 4, $0400
-  print_string line2, 16, $0428
-  print_string line3, 16, $0450
-  print_string line4, 17, $0478
+  print_string line1, 4, $04b2
+  print_string line2, 16, $0557
+  print_string line3, 16, $057f
+  print_string line4, 17, $05a7
+
+  print_string info0, 8, $0748
+  print_string info1, 13, $0770
+  print_string info2, 14, $0798
+  print_string info3, 21, $07c0
 
   jsr print_speed
 
@@ -453,9 +463,9 @@ draw_image SUBROUTINE draw_image:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-slow .byte   " SLOW "
-medium .byte "MEDIUM"
-fast .byte   " FAST "
+slow .byte   "  SLOW -"
+medium .byte "MEDIUM -"
+fast .byte   "  FAST -"
 
 print_speed SUBROUTINE print_speed:
   lda speed
@@ -465,15 +475,15 @@ print_speed SUBROUTINE print_speed:
   beq .medium
 
   ; fast
-  print_string fast, 6, $04a0
+  print_string fast, 8, $059e
   rts
 
 .slow:
-  print_string slow, 6, $04a0
+  print_string slow, 8, $059e
   rts
 
 .medium:
-  print_string medium, 6, $04a0
+  print_string medium, 8, $059e
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -502,18 +512,19 @@ change_speed SUBROUTINE change_speed:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-game_over_msg_1 .byte "GAME OVER"
+game_over_msg_1 .byte "GAME  OVER"
 game_over_msg_2 .byte "FIRE TO RESTART"
+uppercase_score .byte 211,195,207,210,197,224
 
 game_over SUBROUTINE game_over:
   jsr $e544 ; clear screen
   lda #23
   sta 53272 ; lowercase mode
 
-  print_string game_over_msg_1, 9, $0428
-  print_string game_over_msg_2, 15, $0450
+  print_string game_over_msg_1, 10, $04af
+  print_string game_over_msg_2, 15, $04fc
 
-  draw_stats score_text, 6, score, $0478, 4
+  draw_stats uppercase_score, 6, score, $054f, 4
 
   jsr wait_fire
 
