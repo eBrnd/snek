@@ -240,12 +240,13 @@ main SUBROUTINE
 
 .loop_forever:
   jsr title_screen
-  jsr welcome_screen
-  jsr $e544 ; clear screen
 
   ; turn off all the sprites
   lda #$00
   sta $d015
+
+  jsr welcome_screen
+  jsr $e544 ; clear screen
 
   jsr game_setup
 .loop_round:
