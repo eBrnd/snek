@@ -178,19 +178,6 @@ ws_sprite_base: .byte $00, $00
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  MAC debounce_loop
-  ldx #8
-.debounce_loop:
-.raster_loop:
-  lda $d012
-  cmp #$ff
-  bne .raster_loop
-  dex
-  bne .debounce_loop
-  ENDM
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 score_text .byte 147,131,143,146,133,160
 lives_text .byte 140,137,150,133,147,160
 
@@ -412,7 +399,7 @@ welcome_screen SUBROUTINE welcome_screen:
   rts
 
 .change_speed:
-  debounce_loop
+  jsr debounce_loop
 
 .wait_key_release:
   lda $dc01 ; PRB
@@ -422,7 +409,7 @@ welcome_screen SUBROUTINE welcome_screen:
   jsr change_speed
   jsr print_speed
 
-  debounce_loop
+  jsr debounce_loop
 
   jmp .key_loop
 
@@ -556,7 +543,7 @@ wait_fire SUBROUTINE wait_fire:
   and #$10
   bne .loop_press
 
-  debounce_loop
+  jsr debounce_loop
 
   ; wait until button is released, so it doesn't misfire F1
 .loop_release:
@@ -564,7 +551,7 @@ wait_fire SUBROUTINE wait_fire:
   and #$10
   beq .loop_release
 
-  debounce_loop
+  jsr debounce_loop
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -580,6 +567,19 @@ setup SUBROUTINE setup:
   lda #speed_normal
   sta speed
 
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+debounce_loop SUBROUTINE debounce_loop:
+  ldx #8
+.debounce_loop:
+.raster_loop:
+  lda $d012
+  cmp #$ff
+  bne .raster_loop
+  dex
+  bne .debounce_loop
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
