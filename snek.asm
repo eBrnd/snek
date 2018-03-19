@@ -258,7 +258,9 @@ main SUBROUTINE
   sbc #1
   sta lives
   cld
-  bne .loop_round ; new round if >0 lives left
+
+  cmp #$99
+  bne .loop_round ; new round if >=0 lives left (didn't wrap around to 99)
 
   jsr $e544 ; clear screen
   jsr set_text_color
@@ -682,7 +684,7 @@ game_setup SUBROUTINE game_setup:
   lda #$00
   sta score
   sta score+1
-  lda #$24 ; 24 lives (BCD)
+  lda #$23 ; 23 lives (BCD)
   sta lives
   jmp .setup_leg_out
 
@@ -690,9 +692,8 @@ game_setup SUBROUTINE game_setup:
   lda #$00
   sta score
   sta score+1
-  lda #3
+  lda #2
   sta lives
-  jmp .setup_leg_out
 
 .setup_leg_out:
   rts
