@@ -242,7 +242,14 @@ main SUBROUTINE
   jsr game_setup
 .loop_round:
   jsr round_setup
+
+  lda #0
+  sta frame_ctr
+
   jsr game_loop
+
+  ldx #18
+  jsr delay
 
   ; account for lives
   sed
@@ -399,7 +406,8 @@ welcome_screen SUBROUTINE welcome_screen:
   rts
 
 .change_speed:
-  jsr debounce_loop
+  ldx #2
+  jsr delay
 
 .wait_key_release:
   lda $dc01 ; PRB
@@ -409,7 +417,8 @@ welcome_screen SUBROUTINE welcome_screen:
   jsr change_speed
   jsr print_speed
 
-  jsr debounce_loop
+  ldx #2
+  jsr delay
 
   jmp .key_loop
 
@@ -543,15 +552,17 @@ wait_fire SUBROUTINE wait_fire:
   and #$10
   bne .loop_press
 
-  jsr debounce_loop
+  ldx #2
+  jsr delay
 
-  ; wait until button is released, so it doesn't misfire F1
+  ; wait until button is released
 .loop_release:
   lda $dc00
   and #$10
   beq .loop_release
 
-  jsr debounce_loop
+  ldx #2
+  jsr delay
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -571,15 +582,18 @@ setup SUBROUTINE setup:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-debounce_loop SUBROUTINE debounce_loop:
-  ldx #8
-.debounce_loop:
-.raster_loop:
+delay SUBROUTINE delay: ; number of frames in X
+.delay:
+.raster_loop_1:
+  lda $d012
+  cmp #$38
+  bne .raster_loop_1
+.raster_loop_2:
   lda $d012
   cmp #$ff
-  bne .raster_loop
+  bne .raster_loop_2
   dex
-  bne .debounce_loop
+  bne .delay
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
