@@ -179,7 +179,7 @@ ws_sprite_base: .byte $00, $00
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   MAC debounce_loop
-  ldx #4 ; wait for raster line to appear twice
+  ldx #8
 .debounce_loop:
 .raster_loop:
   lda $d012
