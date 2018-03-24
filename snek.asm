@@ -1195,18 +1195,17 @@ game_loop SUBROUTINE game_loop:
   sta tail_dir
 
 .tail_nochange:
+  ; draw tail -- only when tail was actually advanced, so we don't draw it in the same spot twice
+  ; right after a goodie was eaten, and risk deleting the goodie right away
+  lda #space_char
+  ldy #0
+  sta (tail_l),y
 
 .dont_advance_tail:
 
   jsr place_goodie
 
 .skip_goodie:
-
-  ; draw tail - do this after placing the goodie, so that goodie won't be placed in a spot where
-  ; it can be deleted right away
-  lda #space_char
-  ldy #0
-  sta (tail_l),y
 
 .timer_loop:
   lda frame_ctr
