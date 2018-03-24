@@ -1004,44 +1004,28 @@ game_loop SUBROUTINE game_loop:
   cmp #2
   beq .move_south
 
-  ; move west -- TODO lots of duplicate code -- make macro
-  sec
-  lda head_l
-  sbc #1
-  sta head_l
-  lda head_h
-  sbc #0
-  sta head_h
+  ; move west
+  lda #$ff ; = -1
+  ldx #$ff
+  jsr move_head
   jmp .move_out
 
 .move_north:
-  sec
-  lda head_l
-  sbc #40
-  sta head_l
-  lda head_h
-  sbc #0
-  sta head_h
+  lda #$d8 ; = -40
+  ldx #$ff
+  jsr move_head
   jmp .move_out
 
 .move_east:
-  clc
-  lda head_l
-  adc #1
-  sta head_l
-  lda head_h
-  adc #0
-  sta head_h
+  lda #$01
+  ldx #$00
+  jsr move_head
   jmp .move_out
 
 .move_south:
-  clc
-  lda head_l
-  adc #40
-  sta head_l
-  lda head_h
-  adc #0
-  sta head_h
+  lda #$28 ; = 40
+  ldx #$00
+  jsr move_head
 
 .move_out:
 
@@ -1216,6 +1200,18 @@ game_loop SUBROUTINE game_loop:
 
   jmp game_loop
 
+  rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+move_head SUBROUTINE move_head:
+  ; A,X contains amount to move (16-bit, 2K)
+  clc
+  adc head_l
+  sta head_l
+  txa
+  adc head_h
+  sta head_h
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
