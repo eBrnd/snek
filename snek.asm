@@ -993,10 +993,11 @@ game_loop SUBROUTINE game_loop:
   ldy #0
   sta (head_l),y
 
-
   ; move head =========================
   lda direction
   sta prev_dir ; store previous direction for next round
+  ldx #head_l ; move routine needs ptr to head low byte in x
+
   cmp #0
   beq .move_north
   cmp #1
@@ -1006,25 +1007,25 @@ game_loop SUBROUTINE game_loop:
 
   ; move west
   lda #$ff ; = -1
-  ldx #$ff
+  ldy #$ff
   jsr move_head
   jmp .move_out
 
 .move_north:
   lda #$d8 ; = -40
-  ldx #$ff
+  ldy #$ff
   jsr move_head
   jmp .move_out
 
 .move_east:
   lda #$01
-  ldx #$00
+  ldy #$00
   jsr move_head
   jmp .move_out
 
 .move_south:
   lda #$28 ; = 40
-  ldx #$00
+  ldy #$00
   jsr move_head
 
 .move_out:
@@ -1205,13 +1206,14 @@ game_loop SUBROUTINE game_loop:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 move_head SUBROUTINE move_head:
-  ; A,X contains amount to move (16-bit, 2K)
+  ; A,Y contains amount to move (16-bit, 2K); X ptr to head low byte
   clc
-  adc head_l
-  sta head_l
-  txa
-  adc head_h
-  sta head_h
+  adc #0,x
+  sta #0,x
+  tya
+  inx
+  adc #0,x
+  sta #0,x
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
