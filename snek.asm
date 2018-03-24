@@ -800,7 +800,7 @@ round_setup SUBROUTINE round_setup:
   lda #$00 ; SR
   sta $d40d
 
-  lda #$0f ; SID volume (low nibble)
+  lda #$8f ; SID volume (low nibble); "3 OFF" set
   sta $d418
 
   ; reset frame counter
