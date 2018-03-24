@@ -1045,8 +1045,7 @@ game_loop SUBROUTINE game_loop:
   rts ; game over.
 
 .eat_goodie:
-  ldx #1
-  stx do_spawn_goodie
+  inc do_spawn_goodie
 
   ; play scoring sound
   lda #score_vc
@@ -1287,8 +1286,7 @@ place_goodie SUBROUTINE place_goodie:
   lda #goodie_color
   sta ($63),y
 
-  lda #0
-  sta do_spawn_goodie ; only reset if a goodie was actually spawned
+  dec do_spawn_goodie ; only reset if a goodie was actually spawned
 
 .dont_place_a_goodie_now:
 
