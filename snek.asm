@@ -1008,25 +1008,25 @@ game_loop SUBROUTINE game_loop:
   ; move west
   lda #$ff ; = -1
   ldy #$ff
-  jsr move_head
+  jsr move_object
   jmp .move_out
 
 .move_north:
   lda #$d8 ; = -40
   ldy #$ff
-  jsr move_head
+  jsr move_object
   jmp .move_out
 
 .move_east:
   lda #$01
   ldy #$00
-  jsr move_head
+  jsr move_object
   jmp .move_out
 
 .move_south:
   lda #$28 ; = 40
   ldy #$00
-  jsr move_head
+  jsr move_object
 
 .move_out:
 
@@ -1084,6 +1084,8 @@ game_loop SUBROUTINE game_loop:
   jmp .dont_advance_tail
 .advance_tail:
 
+  ldx #tail_l ; for movement subroutine
+
   lda tail_dir
   cmp #0
   beq .tail_north
@@ -1092,44 +1094,28 @@ game_loop SUBROUTINE game_loop:
   cmp #2
   beq .tail_south
 
-  ; TODO this is really copy pasta. go and finally make a macro
   ; tail west
-  sec
-  lda tail_l
-  sbc #1
-  sta tail_l
-  lda tail_h
-  sbc #0
-  sta tail_h
+  lda #$ff
+  ldy #$ff
+  jsr move_object
   jmp .tailmove_out
 
 .tail_north:
-  sec
-  lda tail_l
-  sbc #40
-  sta tail_l
-  lda tail_h
-  sbc #0
-  sta tail_h
+  lda #$d8
+  ldy #$ff
+  jsr move_object
   jmp .tailmove_out
 
 .tail_east:
-  clc
-  lda tail_l
-  adc #1
-  sta tail_l
-  lda tail_h
-  adc #0
-  sta tail_h
+  lda #$01
+  ldy #$00
+  jsr move_object
   jmp .tailmove_out
 
 .tail_south:
-  clc
-  lda tail_l
-  adc #40
-  sta tail_l
-  lda tail_h
-  adc #0
+  lda #$28
+  ldy #$00
+  jsr move_object
   sta tail_h
 
 .tailmove_out:
@@ -1205,7 +1191,7 @@ game_loop SUBROUTINE game_loop:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-move_head SUBROUTINE move_head:
+move_object SUBROUTINE move_object:
   ; A,Y contains amount to move (16-bit, 2K); X ptr to head low byte
   clc
   adc #0,x
