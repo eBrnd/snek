@@ -6,6 +6,8 @@ border_color set 11 ; screen border
 bg_color set 13 ; background
 barrier_color set 0 ; game board border
 barrier_char_code set 35 ; char code for the border 35 = #
+snek_color set 6 ; color code for the snek
+text_color set 0 ; color code for text
 snek_head set 81 ; char code for the snake head 81 = dot in the middle
 snek_horz set 67 ; line drawing chars for snek body
 snek_vert set 66
@@ -15,6 +17,7 @@ snek_dr set 85
 snek_ur set 74
 space_char set 32 ; free space on game board (= space character)
 goodie_char set 83 ; char for the goodies (= heart)
+goodie_color set 02 ; color code for the goodies
 score_vc set $20 ; voice control for scoring sound (without gate)
 death_vc set $80 ; voice control for death sound (without gate)
 inv_zero set 176 ; inverted "0" character for score and lives output
@@ -237,8 +240,6 @@ main SUBROUTINE
   jsr welcome_screen
   jsr $e544 ; clear screen
 
-  jsr set_text_color
-
   jsr game_setup
 .loop_round:
   jsr round_setup
@@ -274,7 +275,7 @@ main SUBROUTINE
 
 set_text_color SUBROUTINE set_text_color:
   ; set char color for inside of field
-  clean_field 0, 40, 0, 40, $d800, 0
+  clean_field 0, 40, 0, 40, $d800, text_color
   rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -921,13 +922,7 @@ game_loop SUBROUTINE game_loop:
   ; takes care of displaying game over screen / welcome screen and re-starting if the player chooses
   ; to.
 
-  ; TODO when drawing goodies, they should be a different color - maybe it makes sense to have a
-  ;      subroutine for drawing them. when eating them, the color ram has to be reset to snek color.
-
   ; replace head by line segment =======
-  ; (this could be moved into the "move head" blocks probably, and save some branches, but this is
-  ; an optimization that would make the code harder to read, so we don't do it until we run into
-  ; problems)
   ; (we assume direction does not change while this routine is running, i.e. that is completes
   ; fast enough before the next raster interrupt fires)
   lda direction
@@ -1076,6 +1071,18 @@ game_loop SUBROUTINE game_loop:
   lda #snek_head
   ldy #0
   sta (head_l),y
+
+  ; set color
+  clc
+  lda #$d4 ; move ptr into color ram
+  adc head_h
+  sta head_h
+  lda #snek_color
+  sta (head_l),y
+  sec ; .. and back into screen ram
+  lda head_h
+  sbc #$d4
+  sta head_h
 
   ; advance tail if no goodie was eaten
   txa
@@ -1268,6 +1275,14 @@ place_goodie SUBROUTINE place_goodie:
 .spawn_okay:
   lda #goodie_char
   ldy #0
+  sta ($63),y
+
+  ; set color
+  clc
+  lda #$d4 ; move ptr into same location in color ram
+  adc $64
+  sta $64
+  lda #goodie_color
   sta ($63),y
 
   lda #0
