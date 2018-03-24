@@ -24,6 +24,8 @@ inv_zero set 176 ; inverted "0" character for score and lives output
 speed_slow set 10
 speed_normal set 6
 speed_fast set 4
+score_location set $0406 ; on-screen location where to draw score counter
+lives_location set $041a ; on-screen location where to draw lives counter
 
 ; autostart ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -662,8 +664,8 @@ draw_sides_out:
   cmp #$c0
   bne .sides_loop
 
-  draw_stats score_text, 6, score, $07c0, 4
-  draw_stats lives_text, 6, lives, $0400, 2
+  draw_stats score_text, 6, score, score_location, 4
+  draw_stats lives_text, 6, lives, lives_location, 2
 
   rts
 
@@ -1063,7 +1065,7 @@ game_loop SUBROUTINE game_loop:
   sta score+1
   cld
 
-  draw_stats score_text, 6, score, $07c0, 4
+  draw_stats score_text, 6, score, score_location, 4
 
 .continue:
 
