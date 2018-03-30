@@ -32,8 +32,8 @@ Links
 * Commodore 64 Programming on Windows (Tutorial): https://github.com/petriw/Commodore64Programming
   * A great way for me to get started, although I didn't even use Windows for coding
 * And a bunch of other resources, like:
-  * c64-wiki.com
-  * http://www.masswerk.at/6502/6502\_instruction\_set.html#ADC
+  * www.c64-wiki.com
+  * http://www.masswerk.at/6502/6502_instruction_set.html#ADC
   * https://www.waitingforfriday.com/?p=661 (SID Datasheet)
   * http://sta.c64.org/cbm64mem.html
 
