@@ -8,13 +8,17 @@ I made a Commodore 64 game! It's another remake of a classic!
 How to Run
 ----------
 
-It needs a joystick plugged into port 2. Use your favorite means of transferring data to a C64, for
-instance an IEC2SD. Just go `LOAD"*",8`, and then `RUN`. At the title screen, press the fire button
-to start the actual game.
+You can download a .prg file from [the "releases" tab](https://github.com/eBrnd/snek/releases).
 
-It also works in an emulator. Using VICE on Linux, you can start it using
-`x64 -joydev2 1 snek.prg`. The `joydev2 1` configured the numpad to control emulated joystick
-plugged into the emulated port 2 of you emulated C64.
+To play the game on a real C64, you need a joystick plugged into port 2.
+Use your favorite means of transferring data to a C64, for instance an IEC2SD.
+At the BASIC prompt, enter `LOAD"*",8`, and then `RUN`.
+
+At the title screen, press the fire button to start the actual game.
+
+It also works in an emulator.
+For instance, using VICE on Linux, you can start it using `x64 -joydev2 1 snek.prg`. The `joydev2 1` configured the numpad to control emulated joystick plugged into the emulated port 2 of you emulated C64.
+The keys 2, 4, 6, 8 on your numpad will be mapped to the four directions, and 0 will be the fire button.
 
 Links
 -----
