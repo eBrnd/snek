@@ -1,5 +1,5 @@
 TARGET=snek
-.PHONE: all clean
+.PHONY: all clean
 
 all: $(TARGET).prg
 
